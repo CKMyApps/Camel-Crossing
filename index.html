@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camel Crossing | CK My Apps</title>
+<meta name="description" content="A turn-based survival game across 322 km of the Gobi Desert.">
+<style>
+:root{color-scheme:dark;--ink:#f8e4be;--muted:#cfbca0;--sand:#f2b363;--line:#765443;--panel:#30231f;--night:#211916}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#1b1515;color:var(--ink);font:16px/1.5 "Courier Prime",ui-monospace,monospace}
+main{width:min(100% - 28px,760px);margin:clamp(14px,5vh,48px) auto;border:1px solid var(--line);background:var(--night);box-shadow:0 20px 60px #0006}
+.hero{position:relative;isolation:isolate;background:#533438}.hero canvas{display:block;width:100%;height:clamp(190px,35vw,275px);image-rendering:pixelated}
+.heading{position:absolute;inset:0;padding:clamp(16px,4vw,36px);pointer-events:none;text-shadow:0 3px #301e26}
+.brand{color:#ffe2af;letter-spacing:.16em;font-size:.75rem}h1,h2,p{margin:0}h1{font-size:clamp(30px,7vw,64px);line-height:1.12;letter-spacing:-.055em;color:#fff0d1}
+h2{font-size:1.3rem}section{padding:clamp(16px,4vw,30px);border-top:1px solid var(--line)}section>*+*{margin-top:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+button{font:inherit;color:var(--ink);background:#3e2c25;border:1px solid var(--line);padding:10px 12px;text-align:left;min-height:46px;cursor:pointer}
+button:hover:not(:disabled){background:#51382c;border-color:var(--sand)}button:focus-visible,a:focus-visible{outline:2px solid #fff0bf;outline-offset:3px}
+button:disabled{opacity:.48;cursor:default}.primary{background:var(--sand);color:#251914;border-color:var(--sand);font-weight:bold}
+button.primary:hover:not(:disabled){background:#ffce8a}
+.muted,small{color:var(--muted)}small{font-size:.8rem}.key{color:var(--sand);margin-right:.35em}
+a{color:#ffc17c}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:0}
+.stats div{border:1px solid var(--line);background:var(--panel);padding:7px}.stats dt{font-size:.72rem;color:var(--muted)}.stats dd{margin:0;font-weight:bold}
+progress{width:100%;display:block;accent-color:var(--sand);height:12px}.log{list-style:none;padding:0;margin-bottom:0}.log li+li{margin-top:5px;color:var(--muted)}
+#message{min-height:1.5em;color:#ffd392}#message:empty{display:none}
+ol{padding-left:1.6em}ol li+li{margin-top:.65em}
+[hidden]{display:none!important}@media(max-width:470px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<main>
+<header class="hero">
+<canvas id="landscape" width="360" height="128" aria-hidden="true"></canvas>
+<div class="heading"><span class="brand">CK MY APPS</span><h1>Camel Crossing</h1></div>
+</header>
+<section id="menu" aria-label="Main menu">
+<p>Cross <strong>322 km</strong> of the Gobi before the raiders catch up.</p>
+<div class="grid">
+<button class="primary" id="new">New Game</button><button id="load">Load Game</button>
+<button id="guide">Walkthrough</button><button id="settingsButton">Settings</button>
+</div>
+<p><small id="saveInfo"></small></p>
+</section>
+<section id="game" aria-label="Expedition" hidden>
+<h2 id="gameHeading" tabindex="-1">The Gobi Desert</h2>
+<dl class="stats">
+<div><dt>Distance</dt><dd id="distance"></dd></div><div><dt>Water left</dt><dd id="water"></dd></div>
+<div><dt>Camel fatigue</dt><dd id="fatigue"></dd></div><div><dt>Raiders behind</dt><dd id="lead"></dd></div>
+</dl>
+<progress id="progress" max="322" value="0" aria-label="Expedition distance"></progress>
+<ul id="log" class="log" aria-live="polite" aria-relevant="additions text"></ul>
+<div class="grid" id="actions">
+<button data-action="steady"><span class="key">1</span>Steady Pace</button>
+<button data-action="sprint"><span class="key">2</span>Full Speed</button>
+<button data-action="drink"><span class="key">3</span>Drink Water</button>
+<button data-action="rest"><span class="key">4</span>Rest</button>
+</div>
+<div class="grid" id="junction" hidden>
+<button data-action="ridge"><span class="key">1</span>Cross the Dunes</button>
+<button data-action="well"><span class="key">2</span>Take the Well Trail</button>
+</div>
+<p id="hint" class="muted"></p>
+<div class="grid"><button data-back>Main Menu</button><button class="primary" id="retry" hidden>New Game</button></div>
+</section>
+<section id="walkthrough" hidden>
+<h2 tabindex="-1">Walkthrough</h2>
+<ol>
+<li>Use <strong>Steady Pace</strong> for most of the trip. Every move or rest increases your thirst. Drink when the game warns you, or sooner if you have water to spare.</li>
+<li><strong>Full Speed</strong> widens the gap quickly but adds 25 percentage points of fatigue. At 100%, your camel collapses. Rest while you have a lead. A rest removes 55 points of fatigue but the raiders keep moving.</li>
+<li>Oases refill your six drinks. At the two forks, the dunes cover more ground and tire the camel. The well trail is slower, but the well may hold water.</li>
+<li>Reach <strong>322 km</strong> before the raiders close the gap or your supplies fail. Sandstorms and water finds vary between runs.</li>
+</ol>
+<button data-back>Main Menu</button>
+</section>
+<section id="settings" hidden>
+<h2 tabindex="-1">Settings</h2>
+<button id="sound" type="button" aria-pressed="true">Sound On</button>
+<h2>Credits</h2>
+<p>Created by Christos A. Kazantzoglou for <a href="https://ckmyapps.substack.com/">CK My Apps</a>.</p>
+<p class="muted">Inspired by <em>Camel</em> by the Heath Users Group, published in <em>More BASIC Computer Games</em> (1979).</p>
+<button data-back>Main Menu</button>
+</section>
+<section id="message" role="status"></section>
+</main>
+<script>
+'use strict';
+const goal = 322;
+const byId = (id) => document.getElementById(id);
+const saveKey = 'ck.camelCrossing.save.v1';
+const soundKey = 'ck.camelCrossing.sound';
+const recordKey = 'ck.camelCrossing.record';
+const panels = ['menu', 'game', 'walkthrough', 'settings'];
+const actions = {steady:[12, 18, 8], sprint:[21, 30, 25], ridge:[20, 25, 18], well:[10, 14, 6]};
+let active = 'menu';
+let state;
+let audio;
+let soundOn = read(soundKey) !== false;
+let record = Number(read(recordKey)) || 0;
+
+function read(key) {
+  try { return JSON.parse(localStorage.getItem(key)); }
+  catch { return null; }
+}
+function write(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+  catch { return false; }
+}
+function savedGame() {
+  const saved = read(saveKey);
+  return saved?.version === 1 && saved.status === 'playing' &&
+    ['km','water','thirst','fatigue','raiders','fork'].every((key) => Number.isFinite(saved[key])) &&
+    Array.isArray(saved.log) && saved.log.every((line) => typeof line === 'string') ? saved : null;
+}
+function menuInfo() {
+  const saved = savedGame();
+  byId('load').disabled = !saved;
+  byId('saveInfo').textContent =
+    (saved ? 'Saved expedition at ' + saved.km + ' km.' : 'No saved expedition.') +
+    (record ? ' Best distance: ' + record + ' km.' : '');
+}
+function show(panel) {
+  active = panel;
+  panels.forEach((name) => { byId(name).hidden = name !== panel; });
+  byId('message').textContent = '';
+  if (panel === 'menu') menuInfo();
+  const focus = byId(panel).querySelector('h2, button');
+  focus?.focus({preventScroll:true});
+  draw(panel === 'game' ? state.km : 0);
+}
+function checkpoint() {
+  const hasRecord = state.km > record;
+  if (hasRecord) record = state.km;
+  const saved = write(saveKey, state.status === 'playing' ? state : null);
+  const recorded = !hasRecord || write(recordKey, record);
+  byId('message').textContent = saved && recorded ? '' : 'Browser storage is unavailable. Progress may be lost when you leave.';
+}
+function newGame() {
+  if (savedGame() && !window.confirm('Start a new game and replace your saved expedition?')) return;
+  state = {version:1, km:0, water:6, thirst:0, fatigue:0, raiders:-26,
+    fork:0, status:'playing', log:['You leave the oasis at dusk. The raiders are 26 km behind.']};
+  show('game');
+  checkpoint();
+  render();
+  beep('move');
+}
+function play(action) {
+  if (active !== 'game' || state.status !== 'playing') return;
+  const atFork = junctionAhead();
+  const branch = action === 'ridge' || action === 'well';
+  if (action === 'drink' ? !state.water || !state.thirst : branch !== atFork) return;
+  const notes = [];
+  if (action === 'drink') {
+    state.water -= 1;
+    state.thirst = 0;
+    notes.push('You take a drink and carry on.');
+  } else {
+    state.thirst += 1;
+    state.raiders += random(6, 10);
+    if (action === 'rest') {
+      state.fatigue = Math.max(0, state.fatigue - 55);
+      notes.push('Your camel rests. The raiders gain ground.');
+    } else {
+      const [min, max, fatigue] = actions[action];
+      const covered = random(min, max);
+      state.km += covered;
+      state.fatigue += fatigue;
+      if (branch) state.fork += 1;
+      notes.push(({steady:'Steady pace', sprint:'Full speed', ridge:'Across the dunes', well:'Along the well trail'})[action] + ' · ' + covered + ' km.');
+      if (action === 'well') {
+        if (Math.random() < .7) refill(notes, 'There is water in the well. You refill your canteen.');
+        else notes.push('The old well is dry.');
+      } else {
+        const event = Math.random();
+        if (event < .13) refill(notes, 'You find an oasis and refill your canteen.');
+        else if (event < .24) {
+          const lost = random(4, 9);
+          state.km -= lost;
+          notes.push('A sandstorm costs you ' + lost + ' km.');
+        }
+      }
+    }
+  }
+  state.km = Math.min(goal, state.km);
+  const outcome = state.fatigue >= 100 ? 'Your camel is too exhausted to go on.' :
+    state.thirst >= 4 ? 'Thirst forces you to stop in the desert.' :
+    state.km <= state.raiders ? 'The raiders catch up with you.' : '';
+  if (outcome) {
+    state.status = 'lost';
+    notes.push(outcome);
+  } else if (state.km === goal) {
+    state.status = 'won';
+    notes.push('You reached the far side of the Gobi!');
+  } else if (junctionAhead()) {
+    notes.push('The trail splits. Cross the dunes or follow the trail to an old well?');
+  }
+  state.log = [notes.join(' '), ...state.log].slice(0, 3);
+  checkpoint();
+  render();
+  beep(state.status === 'playing' ? action : state.status);
+}
+function random(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+function refill(notes, message) {
+  state.water = 6;
+  state.thirst = 0;
+  notes.push(message);
+}
+function junctionAhead() {
+  return state.status === 'playing' && state.fork < 2 && state.km >= [100, 215][state.fork];
+}
+function render() {
+  const playing = state.status === 'playing';
+  const fork = junctionAhead();
+  byId('distance').textContent = state.km + ' / ' + goal + ' km';
+  byId('water').textContent = state.water + ' / 6';
+  byId('fatigue').textContent = Math.min(100, state.fatigue) + '%';
+  byId('lead').textContent = Math.max(0, state.km - state.raiders) + ' km';
+  byId('progress').value = state.km;
+  byId('gameHeading').textContent = playing ? 'The Gobi Desert' : state.status === 'won' ? 'Crossing Complete' : 'Expedition Lost';
+  byId('log').replaceChildren(...state.log.map((text) => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    return item;
+  }));
+  byId('actions').hidden = !playing;
+  byId('junction').hidden = !fork;
+  byId('retry').hidden = playing;
+  byId('hint').textContent = !playing ? '' : state.thirst >= 3 ? 'Thirst warning. Drink before moving or resting.' : 'Thirst: ' + state.thirst + ' / 4';
+  document.querySelector('[data-action="drink"]').disabled = !state.water || !state.thirst;
+  for (const name of ['steady','sprint','rest']) document.querySelector('[data-action="' + name + '"]').hidden = fork;
+  draw(state.km);
+}
+function beep(kind) {
+  if (!soundOn) return;
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const now = audio.currentTime;
+    oscillator.type = 'triangle';
+    oscillator.frequency.value = ({won:660, lost:133, drink:520, rest:240, sprint:385})[kind] || 300;
+    gain.gain.setValueAtTime(.065, now);
+    gain.gain.exponentialRampToValueAtTime(.001, now + .14);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + .15);
+  } catch {}
+}
+function draw(km) {
+  const ctx = byId('landscape').getContext('2d');
+  if (!ctx) return;
+  const sky = ctx.createLinearGradient(0,0,0,128);
+  sky.addColorStop(0,'#432c3f'); sky.addColorStop(.55,'#bd684e'); sky.addColorStop(1,'#f4b975');
+  ctx.fillStyle = sky; ctx.fillRect(0,0,360,128);
+  ctx.fillStyle = '#ffcd81'; ctx.beginPath(); ctx.arc(286,47,22,0,Math.PI*2); ctx.fill();
+  function ridge(color, points) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(0,128);
+    for (const [x,y] of points) ctx.lineTo(x,y);
+    ctx.lineTo(360,128); ctx.closePath(); ctx.fill();
+  }
+  ridge('#a65d48',[[0,81],[43,61],[66,68],[101,55],[142,79],[191,63],[215,68],[253,59],[302,74],[360,62]]);
+  ridge('#79473d',[[0,97],[46,86],[84,91],[129,79],[177,95],[216,88],[276,74],[312,85],[360,87]]);
+  ridge('#4b302d',[[0,108],[65,100],[104,106],[164,101],[209,110],[274,96],[318,97],[360,105]]);
+  ctx.fillStyle = '#f5b56f';
+  for (let x=8; x<360; x+=9) ctx.fillRect(x,116,2,1);
+  const x = 23 + Math.round(285 * km / goal);
+  ctx.fillStyle = '#f8ce8f';
+  for (const [dx,dy,w,h] of [[0,5,16,6],[3,2,5,4],[10,1,5,5],[15,2,3,7],[17,0,6,3],[2,10,2,6],[11,10,2,6],[-2,5,3,2]]) {
+    ctx.fillRect(x+dx,99+dy,w,h);
+  }
+}
+byId('new').onclick = byId('retry').onclick = newGame;
+byId('load').onclick = () => {
+  state = savedGame();
+  if (!state) { menuInfo(); return; }
+  show('game'); render();
+};
+byId('guide').onclick = () => show('walkthrough');
+byId('settingsButton').onclick = () => show('settings');
+document.querySelectorAll('[data-back]').forEach((button) => { button.onclick = () => show('menu'); });
+document.querySelectorAll('[data-action]').forEach((button) => { button.onclick = () => play(button.dataset.action); });
+function soundLabel() {
+  byId('sound').textContent = soundOn ? 'Sound On' : 'Sound Off';
+  byId('sound').setAttribute('aria-pressed', String(soundOn));
+}
+byId('sound').onclick = () => {
+  soundOn = !soundOn;
+  soundLabel();
+  if (!write(soundKey, soundOn)) byId('message').textContent = 'This browser could not save your sound preference.';
+  beep('move');
+};
+window.addEventListener('keydown', (event) => {
+  if (active !== 'game' || state.status !== 'playing' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+  const keys = junctionAhead() ? ['ridge','well','drink'] : ['steady','sprint','drink','rest'];
+  const index = ['1','2','3','4'].indexOf(event.key);
+  if (keys[index]) play(keys[index]);
+});
+soundLabel();
+menuInfo();
+draw(0);
+</script>
+</body>
+</html>
